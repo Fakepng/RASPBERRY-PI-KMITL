@@ -1,6 +1,7 @@
 import time
 import threading
 import spidev
+import random
 
 bus = 0
 device = 0
@@ -9,6 +10,8 @@ spi = spidev.SpiDev()
 spi.open(bus, device)
 spi.max_speed_hz = 50_000
 spi.mode = 0
+
+spi_fail_count = 0
 
 def crc16_modbus(data: bytes) -> list:
     """Calculate the CRC16 Modbus checksum and return as a list of 2 bytes (MSB, LSB)."""
@@ -41,6 +44,10 @@ def validate_crc16_modbus(data: bytes) -> bool:
     return crc_received == crc_calculated
 
 def send_and_receive_spi(spi, n):
+    global spi_fail_count
+    global bus
+    global device
+
     msg_int = [1, 1, 0, 0, 0] + [n]
 
     # Calculate CRC and send the message
@@ -59,11 +66,27 @@ def send_and_receive_spi(spi, n):
     # Validate received data CRC
     if validate_crc16_modbus(received_data):
         print("CRC validation passed.")
+        spi_fail_count = 0
     else:
         print("CRC validation failed.")
+        spi_fail_count = spi_fail_count + 1
+
+        if (spi_fail_count >= 5):
+            msg_int = [1, 1, 1, 0, 0, 0]
+            crc = crc16_modbus(msg_int)
+            msg_crc = msg_int + crc
+            spi.xfer2(msg_crc)
+            time.sleep(1)
+            spi.close()
+            time.sleep(1)
+            spi.open(bus, device)
+
+
+
+
 
 # Start SPI communication
 while True:
-  for i in range(32):
-    send_and_receive_spi(spi, i)
-    time.sleep(.1)
+  i = random.randint(0, 31)
+  send_and_receive_spi(spi, i)
+  time.sleep(.1)

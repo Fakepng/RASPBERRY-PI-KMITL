@@ -5,7 +5,7 @@ import adafruit_dht
 
 dht = adafruit_dht.DHT11(board.D25)
 
-lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=1, cols=16, rows=2, dotsize=8)
+lcd = CharLCD(i2c_expander='PCF8574', address=0x26, port=1, cols=16, rows=2, dotsize=8)
 lcd.clear()
 
 celcius = 0
